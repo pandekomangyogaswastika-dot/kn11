@@ -16,11 +16,11 @@
     "status": "completed"
   },
   {
-    "content": "Frontend: utils/soStatus.js + SoStatusBadges.jsx (StagePill/SubStatusChips/StageTimeline) + OrderDetailPanel + OrdersView + OrderDashboard wired",
+    "content": "Frontend: utils/soStatus.js + SoStatusBadges.jsx + OrderDetailPanel + OrdersView + OrderDashboard wired",
     "status": "completed"
   },
   {
-    "content": "Close phase: seed_reset.sh gate (green, F4 backfill integrated) + testing agent end-to-end + update PLAN_POS_REVAMP.md to SELESAI",
-    "status": "in_progress"
+    "content": "Close phase: seed_reset.sh gate (green) + testing agent (BE 100% / FE 95%) + update PLAN_POS_REVAMP.md & SESSION_HANDOFF.md to SELESAI",
+    "status": "completed"
   }
 ]

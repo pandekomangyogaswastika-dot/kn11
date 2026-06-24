@@ -1,5 +1,18 @@
 # SESSION HANDOFF — Kain Nusantara (KN10)
 
+## Session #059 — 24 Jun 2026 — ONBOARDING (re-copy kn11) + LANJUT & SELESAIKAN FASE 4 (Status SO 2-level SSOT) ✅
+> Tugas owner: copy repo `kn11` → `/app`, `load_context.sh`, baca Tier-0/Tier-1, **verifikasi titik berhenti (FASE 4) + lanjutkan**.
+> **Setup:** repo di-rsync ke `/app` (`.env` MONGO_URL/DB_NAME/REACT_APP_BACKEND_URL DIPERTAHANKAN). BE deps: filter 2 baris litellm/emergentintegrations (sudah ter-install 1.80.0/0.2.0) → install sisa. FE `yarn install` (cache dibersihkan). Restart → backend "Kain Nusantara API aktif", FE compile.
+> **VERIFIKASI AWAL (semua HIJAU):** `seed_reset.sh` LULUS (contract/api_contract/data_integrity/entity_scoping F0-C) · `health_check` 21/3WARN/0FAIL · `audit_endpoint_sweep` 0×5xx · esbuild 0. Titik berhenti dikonfirmasi: FASE 4 (Status SO 2-level) **POC selesai, wiring belum** (per `memory/PLAN_POS_REVAMP.md`).
+> **DIKERJAKAN — FASE 4 SELESAI (wiring penuh BE+FE):**
+> - **Backend wiring** `stage_fields` ke SEMUA jalur tulis status: `sales_orders.py` (`create_order`, `_transition`, `release_reservation`), `fulfillment_status.recompute_so_status`, `backorder_service` (auto-fulfill), `inventory_service` (expire); fallback baca `_norm_backorder`. **approved+backorder → Approved/menunggu_stok.**
+> - **Migrasi** `backend/scripts/migrate_so_status.py` (idempotent, self-verify) + `backfill_so_status` di akhir `seed_realistic.seed_all`.
+> - **Bug poin 14:** `_transition` raise **409 memandu** (`code=INVALID_TRANSITION`, `current_stage`, `allowed_from`, `message` ID + `_allowed_action_hint`).
+> - **Frontend:** `utils/soStatus.js` (mirror derivasi) + `components/SoStatusBadges.jsx` (`StagePill`/`SubStatusChips`/`StageTimeline`); `OrderDetailPanel` timeline stage-based + chip; `OrdersView` kolom "Tahap" = stage pill + sub-chip; `OrderDashboard` Recent Orders = stage pill; CSS `.stage-*`.
+> **GATE AKHIR (HIJAU):** `seed_reset.sh` LULUS + `[F4-Status] backfilled 9/9 SO invalid=0`. Testing agent iter_75: **BE 100% (19/19) · FE 95% (22/23)** (1 non-pass = timeout automasi login sales, BUKAN bug; diverifikasi manual sales load orders OK). ux_audit 0/0 · api_contract 0/0 · compliance 77/0FAIL · esbuild 0.
+> **STATUS PROGRAM:** PLAN_POS_REVAMP FASE 1/2/3/**4** = SELESAI & TERVERIFIKASI. Berikutnya (butuh keputusan owner): FASE 5 (Approval terpadu + RBAC), FASE 6 (PPN/Faktur per-entitas + UX entitas), FASE 7 (Catalog Model). Kredensial uji: semua user `demo12345`.
+
+
 ## Session #056 — 23 Jun 2026 — ONBOARDING (re-copy kn11) + VERIFIKASI TITIK AKHIR DEVELOPMENT ✅
 > Tugas owner: copy repo `kn11` → `/app`, jalankan `load_context.sh`, baca Tier-0/Tier-1, lalu **verifikasi di mana development terhenti**.
 > **Setup:** repo di-rsync ke `/app` (`.env` MONGO_URL/DB_NAME/REACT_APP_BACKEND_URL DIPERTAHANKAN via exclude). BE deps: resolve konflik litellm/emergentintegrations (keduanya sudah ter-install di env: litellm 1.80.0 + emergentintegrations) → install sisa requirements via filter 2 baris itu. FE deps: `yarn install` (cache basi dibersihkan, FE HTTP 200). Services restart → backend "Kain Nusantara API aktif", frontend compile (1 warning lama).

@@ -127,21 +127,20 @@ Aturan: **SO tidak naik ke Approved sampai SEMUA item `pending_approvals` = appr
 - **Migrasi:** `migrate_so_status.py` (idempotent) + gate.
 - **Test:** semua skenario (normal, nilai besar, backorder) berada di stage/sub yang benar; auto-approve tidak error.
 
-> ⏸️ **HANDOFF — DEVELOPMENT BERHENTI DI SINI (24 Jun 2026, Sesi #058)**
-> Status FASE 4: **POC SELESAI & LULUS — wiring app BELUM dimulai.** App tetap berfungsi penuh (FASE 1/2/3 live); semua yang dibuat di FASE 4 sejauh ini **ADDITIVE & belum dipakai runtime** (belum di-import di mana pun), jadi **aman / tidak ada risiko regresi**.
+> ✅ **SELESAI & TERVERIFIKASI (24 Jun 2026, Sesi #059)**
+> Status FASE 4: **WIRING APP SELESAI — stage/sub_status live di backend & frontend, semua gate HIJAU, 0 regresi.** Testing agent iter_75: **Backend 100% (19/19)** · **Frontend 95% (22/23)** (1 non-pass = timeout automasi login sales, BUKAN bug — diverifikasi manual: sales load orders OK, tanpa crash). Gate `seed_reset.sh` LULUS (contract ✅ · api_contract ✅ · data_integrity ✅ · entity_scoping F0-C ✅ · `[F4-Status] stage/sub_status backfilled ke 9/9 SO, invalid=0`). ux_audit 0/0 · verify_api_contract 0/0 · validate_compliance 77 PASS/0 FAIL · esbuild exit 0.
 >
 > **✅ SUDAH DIKERJAKAN (terverifikasi):**
-> 1. `backend/services/so_status.py` (BARU) — SSOT derivasi 2-level: `derive_stage_substatus(order)→(stage,[sub])`, `stage_fields()`, `backfill_so_status(db)` (idempotent), `STAGE_FLOW`, `VALID_STAGES`, `SUBSTATUS_LABELS`, `stage_index()`. Keputusan kunci ter-implement: **approved+backorder → Approved/menunggu_stok** (bukan Confirmed).
-> 2. `backend/scripts/poc_so_status.py` (BARU) — POC isolasi. **HASIL: POC LULUS** — 13 skenario unit PASS + 9 SO di DB semua stage valid (distribusi: Delivered 1, Shipped 2, Confirmed 1, Approved 1, Reserved 4) + backfill idempotent 2× (invalid=0). Jalankan ulang: `cd /app/backend && python scripts/poc_so_status.py`.
+> 1. `backend/services/so_status.py` — SSOT derivasi 2-level (`derive_stage_substatus`, `stage_fields`, `backfill_so_status` idempotent, `STAGE_FLOW`, `VALID_STAGES`, `SUBSTATUS_LABELS`). Keputusan kunci: **approved+backorder → Approved/menunggu_stok**.
+> 2. `backend/scripts/poc_so_status.py` — POC LULUS (13 unit + DB + backfill idempotent).
+> 3. **Wiring backend** (`stage_fields` ke SEMUA jalur tulis status): `routers/sales_orders.py` → `create_order` (insert), `_transition` (merge `stage_fields({**order,**update_data})`), `release_reservation`; `services/fulfillment_status.py` → `recompute_so_status` (set_doc); `services/backorder_service.py` → auto-fulfill backorder; `services/inventory_service.py` → expire reservasi. Fallback baca: `_norm_backorder` derive stage bila kosong (order legacy).
+> 4. **Migrasi formal** `backend/scripts/migrate_so_status.py` (standalone, idempotent, self-verify exit≠0 bila invalid) + `backfill_so_status` dipanggil di akhir `seed_realistic.seed_all` (pola `backfill_roll_counts`).
+> 5. **Bug poin 14:** `_transition` kini raise 409 **memandu** — `detail` JSON: `code=INVALID_TRANSITION`, `current_stage`, `current_sub_status`, `current_status`, `attempted_action`, `allowed_from`, `message` (Bahasa Indonesia + petunjuk aksi via `_allowed_action_hint`). FE tombol sudah ter-guard per-status.
+> 6. **Frontend:** `utils/soStatus.js` (mirror derivasi + `getStage`/`getSubStatus`/`STAGE_FLOW`/`stageMeta`/`subStatusLabel`); `components/SoStatusBadges.jsx` BARU (`StagePill`, `SubStatusChips`, `StageTimeline`); `OrderDetailPanel.jsx` timeline → **stage-based + chip sub-status** (header pakai `order-stage-pill`); `OrdersView.jsx` kolom "Tahap" = stage pill + sub-chip; `OrderDashboard.jsx` Recent Orders = stage pill. CSS `.stage-*` ditambah di `components.css`.
 >
-> **⬜ BELUM DIKERJAKAN (lanjutan FASE 4 — urut prioritas):**
-> 1. **Wiring backend** (import `so_status.stage_fields`): di `routers/sales_orders.py` → `create_order` (set stage di dok sebelum insert), `_transition` (tambah `stage_fields({**order,**update_data})` ke `update_data`), `release_reservation`; di `services/fulfillment_status.py` → `recompute_so_status` (tambah ke `set_doc`). Fallback: di `_norm_backorder` tambahkan stage bila belum ada.
-> 2. **Migrasi formal** `backend/scripts/migrate_so_status.py` (standalone, panggil `backfill_so_status`, self-verify exit≠0 bila invalid) + **panggil `backfill_so_status` di akhir `seed_realistic.seed_all`** (pola sama spt `backfill_roll_counts`).
-> 3. **Bug poin 14:** ubah pesan 409 di `_transition` jadi memandu (sebut stage + aksi yang boleh); FE: guard tombol per-stage.
-> 4. **Frontend:** `utils/soStatus.js` (mirror derivasi sbg fallback: `getStage`, `getSubStatus`, `STAGE_FLOW`, `stageMeta`, `subStatusLabel`); `OrderDetailPanel.jsx` timeline jadi **stage-based + chip sub-status** (ganti `TIMELINE_STEPS/STATUS_ORDER` berbasis status); `OrdersView.jsx` badge stage + chip; `OrderDashboard.jsx`/Dashboard pakai mapping stage.
-> 5. **Tutup fase:** `seed_reset.sh` gate + testing agent end-to-end (skenario normal / nilai besar→waiting_approval / backorder→Approved-menunggu_stok / auto-approve) + update doc ini ke SELESAI.
+> **Verifikasi visual (main agent, 1920×900):** list "Tahap" + detail timeline + dashboard semua menampilkan stage+sub dengan benar untuk admin & sales (mis. SO-0009 Reserved/Menunggu stok + BACKORDER; SO-0005 Approved/Stok siap—bisa di-confirm; SO-0004 Confirmed/Siap pick; SO-0003 Shipped/Sebagian dikirim; SO-0001 Delivered).
 >
-> **Referensi model:** §2.2 (definisi stage+sub) & §2.3 (pemetaan migrasi) di dokumen ini = sumber kebenaran. Resep test UI: `scripts/ui_smoke.py` (domcontentloaded + data-testid, JANGAN networkidle/type=email).
+> **Referensi model:** §2.2 (definisi stage+sub) & §2.3 (pemetaan migrasi) di dokumen ini = sumber kebenaran. Resep test UI: domcontentloaded + data-testid / tombol `demo-login-*-button` (JANGAN networkidle/type=email).
 
 
 ### FASE 5 — Alur Approval Terpadu (special price + over-credit + nilai) + RBAC — poin 8/9/10/12/13
