@@ -6,6 +6,7 @@ import {
 import axios, { API } from "../../../services/apiClient";
 import ErrorNotice from "../../../components/ErrorNotice";
 import { formatCurrency } from "../../../utils/formatters";
+import { getStage, stageMeta } from "../../../utils/soStatus";
 
 function MiniKpi({ icon: Icon, label, value, sub, color = "#007AFF", loading }) {
   return (
@@ -110,7 +111,10 @@ export default function MobileSalesHome({ token, user, onNewOrder, onOpenTab }) 
             <div key={o.id} className="m-list-row">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[12.5px] font-semibold">{o.number}</p>
-                <p className="truncate text-[10.5px] m-muted">{o.customer_name} • {o.status}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={`status-pill ${stageMeta(getStage(o)).cls}`}>{stageMeta(getStage(o)).label}</span>
+                  <p className="truncate text-[10.5px] m-muted">{o.customer_name}</p>
+                </div>
               </div>
               <span className="text-[12px] font-bold tabular-nums text-[#0058CC]">{formatCurrency(o.grand_total)}</span>
             </div>

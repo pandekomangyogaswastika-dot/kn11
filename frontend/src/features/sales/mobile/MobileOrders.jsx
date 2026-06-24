@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { ClipboardList, Search, PackageX, ChevronDown, Check } from "lucide-react";
+import { ClipboardList, Search, PackageX, ChevronDown } from "lucide-react";
 import { formatCurrency } from "../../../utils/formatters";
+import { StagePill, SubStatusChips } from "../../../components/SoStatusBadges";
 
 const FILTERS = [
   { id: "all", label: "Semua" },
@@ -19,7 +20,7 @@ export default function MobileOrders({ orders = [], loading, onBrowse }) {
     const term = q.toLowerCase().trim();
     return orders.filter((o) => {
       if (filter === "active" && !ACTIVE.includes(o.status)) return false;
-      if (filter === "done" && o.status !== "done") return false;
+      if (filter === "done" && o.status !== "done" && o.status !== "delivered") return false;
       if (filter === "cancelled" && !["cancelled", "expired"].includes(o.status)) return false;
       if (!term) return true;
       return [o.number, o.customer_name].filter(Boolean).join(" ").toLowerCase().includes(term);
@@ -65,12 +66,13 @@ export default function MobileOrders({ orders = [], loading, onBrowse }) {
               <div key={o.id} data-testid={`mobile-order-${o.id}`} className="m-card overflow-hidden">
                 <button className="m-press flex w-full items-center gap-3 p-3 text-left" onClick={() => setOpen(isOpen ? null : o.id)}>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[12.5px] font-bold text-[#0058CC]">{o.number}</span>
-                      <span className={`status-pill status-${o.status}`}>{(o.status || "").replace(/_/g, " ")}</span>
+                      <StagePill order={o} testId={`mobile-order-stage-${o.id}`} />
                     </div>
                     <p className="mt-0.5 truncate text-[11.5px] text-[#3C3C43]">{o.customer_name}</p>
-                    <p className="text-[10.5px] m-muted">{(o.items || []).length} item • {o.payment_status === "paid" ? <span className="text-[#1A7A3A]">Lunas</span> : "Belum bayar"}</p>
+                    <SubStatusChips order={o} testIdPrefix={`mobile-order-sub-${o.id}`} className="mt-0.5" />
+                    <p className="mt-0.5 text-[10.5px] m-muted">{(o.items || []).length} item • {o.payment_status === "paid" ? <span className="text-[#1A7A3A]">Lunas</span> : "Belum bayar"}</p>
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-[13px] font-bold tabular-nums">{formatCurrency(total)}</span>
