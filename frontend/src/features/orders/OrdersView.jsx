@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BarChart2, FileText, Search, XCircle, Check } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
-import { StatusPill } from "../../components/CoreWidgets";
+import { StagePill, SubStatusChips } from "../../components/SoStatusBadges";
 import OrderDashboard from "./OrderDashboard";
 import { OrderDetailPanel } from "./OrderDetailPanel";
 import KNSelect from "../../components/KNSelect";
@@ -164,8 +164,8 @@ export default function OrdersView({
                 />
               </div>
               <div className="overflow-hidden">
-                <div className="grid grid-cols-[1fr_90px_90px_70px] bg-[#FAFBFC] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#6B6B73] border-b border-[#EFF0F2]">
-                  <span>Order</span><span>Customer</span><span>Total</span><span>Status</span>
+                <div className="grid grid-cols-[1fr_90px_90px_120px] bg-[#FAFBFC] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#6B6B73] border-b border-[#EFF0F2]">
+                  <span>Order</span><span>Customer</span><span>Total</span><span>Tahap</span>
                 </div>
                 <div className="divide-y divide-[#EFF0F2] max-h-[600px] overflow-y-auto">
                   {loading && (
@@ -180,7 +180,7 @@ export default function OrdersView({
                     <div 
                       data-testid={`order-card-${order.id}`} 
                       key={order.id}
-                      className={`grid grid-cols-[1fr_90px_90px_70px] items-center px-3 py-2.5 cursor-pointer hover:bg-[#FAFBFC] transition-colors ${
+                      className={`grid grid-cols-[1fr_90px_90px_120px] items-center px-3 py-2.5 cursor-pointer hover:bg-[#FAFBFC] transition-colors ${
                         selectedOrder === order.id ? 'bg-[#EFF4FF] border-l-2 border-[#007AFF]' : ''
                       }`}
                       onClick={() => setSelectedOrder(order.id === selectedOrder ? null : order.id)}
@@ -210,7 +210,10 @@ export default function OrdersView({
                       <p data-testid={`order-total-${order.id}`} className="text-[11.5px] font-bold tabular-nums">
                         {formatCurrency(order.total_amount)}
                       </p>
-                      <StatusPill status={order.status} testId={`order-status-${order.id}`} />
+                      <div className="flex flex-col items-start gap-0.5 min-w-0">
+                        <StagePill order={order} testId={`order-status-${order.id}`} />
+                        <SubStatusChips order={order} testIdPrefix={`order-row-substatus-${order.id}`} />
+                      </div>
                     </div>
                   ))}
                 </div>

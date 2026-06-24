@@ -114,12 +114,16 @@ async def expire_old_reservations() -> int:
     ).to_list(200)
     expired = 0
     from services.roll_service import release_order_rolls
+    from services.so_status import stage_fields
     for order in orders:
         await release_order_rolls(order["id"])
+        _exp_set = {"status": "expired", "allocations": [], "backorders": [],
+                    "has_backorder": False, "updated_at": now_iso()}
+        # F4 — stage/sub_status: expired → Cancelled/kedaluwarsa.
+        _exp_set.update(stage_fields({**order, **_exp_set}))
         await db.sales_orders.update_one(
             {"id": order["id"]},
-            {"$set": {"status": "expired", "allocations": [], "backorders": [],
-                      "has_backorder": False, "updated_at": now_iso()}}
+            {"$set": _exp_set}
         )
         from dependencies import audit
         await audit(

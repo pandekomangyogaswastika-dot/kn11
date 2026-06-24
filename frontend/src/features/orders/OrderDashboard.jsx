@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { TrendingUp, TrendingDown, AlertCircle, Clock, Package, DollarSign, Users, Calendar } from "lucide-react";
 import KNSelect from "../../components/KNSelect";
+import { getStage, stageMeta } from "../../utils/soStatus";
 
 function OrderDashboard({ orders = [], loading = false }) {
   const [timeRange, setTimeRange] = useState("7d"); // 7d, 30d, 90d
@@ -247,13 +248,11 @@ function OrderDashboard({ orders = [], loading = false }) {
                     </td>
                     <td className="px-3 py-2 text-[11.5px] font-semibold text-right tabular-nums">{formatCurrency(order.total_amount)}</td>
                     <td className="px-3 py-2 text-center">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                        order.status === "done" ? "bg-green-100 text-green-700" :
-                        order.status === "confirmed" ? "bg-blue-100 text-blue-700" :
-                        order.status === "cancelled" ? "bg-red-100 text-red-700" :
-                        "bg-gray-100 text-gray-700"
-                      }`}>
-                        {order.status}
+                      <span
+                        data-testid={`dashboard-order-stage-${order.id}`}
+                        className={`status-pill ${stageMeta(getStage(order)).cls}`}
+                      >
+                        {stageMeta(getStage(order)).label}
                       </span>
                     </td>
                   </tr>

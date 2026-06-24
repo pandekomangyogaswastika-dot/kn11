@@ -87,14 +87,18 @@ async def auto_fulfill_backorders(product_id: str, owner_entity_id: str) -> Dict
             #  - pure backorder (waiting_stock) → reserved begitu ada porsi ter-reservasi
             #  - status lain (reserved/waiting_approval/approved/confirmed) TIDAK diubah
             new_status = "reserved" if prev_status == "waiting_stock" else prev_status
-            await db.sales_orders.update_one({"id": order["id"]}, {"$set": {
+            _bo_set = {
                 "allocations": order["allocations"],
                 "items": order["items"],
                 "backorders": order["backorders"],
                 "has_backorder": still_bo,
                 "status": new_status,
                 "updated_at": now_iso(),
-            }})
+            }
+            # F4 — sinkronkan stage + sub_status (turunan status + backorder final).
+            from services.so_status import stage_fields
+            _bo_set.update(stage_fields({**order, **_bo_set}))
+            await db.sales_orders.update_one({"id": order["id"]}, {"$set": _bo_set})
             # Auto-commit (4a): bila order sudah approved/confirmed, roll backorder yang
             # baru ter-reservasi langsung di-commit mengikuti approval awal (tanpa approval ulang).
             if new_status in ("approved", "confirmed"):

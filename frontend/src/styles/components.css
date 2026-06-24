@@ -162,6 +162,15 @@
 .status-partially_shipped { background: rgba(255, 92, 0, 0.14); color: #B23B14; }
 .status-shipped, .status-dispatched { background: rgba(10, 132, 255, 0.14); color: #0058CC; }
 
+/* === F4 — STAGE PILLS (Status SO 2-level SSOT) === */
+.stage-reserved  { background: rgba(175, 82, 222, 0.13); color: #6B219A; }
+.stage-approved  { background: rgba(88, 86, 214, 0.14); color: #4B49B6; }
+.stage-confirmed { background: rgba(52, 199, 89, 0.15); color: #126E2C; }
+.stage-picked    { background: rgba(0, 122, 255, 0.13); color: #0058CC; }
+.stage-shipped   { background: rgba(10, 132, 255, 0.14); color: #0058CC; }
+.stage-delivered { background: rgba(52, 199, 89, 0.18); color: #0E5C24; }
+.stage-cancelled { background: rgba(255, 59, 48, 0.13); color: #A8221A; }
+
 /* === FULFILLMENT MODE PILLS (Sub-fase 1.4 — ATP & Fulfillment Modes) === */
 .fmode-from_stock     { background: rgba(52, 199, 89, 0.15); color: #126E2C; text-transform: none; }
 .fmode-from_incoming  { background: rgba(0, 122, 255, 0.13); color: #0058CC; text-transform: none; }

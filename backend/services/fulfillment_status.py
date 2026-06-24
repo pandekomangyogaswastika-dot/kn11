@@ -57,6 +57,9 @@ async def recompute_so_status(order_id: str) -> str:
     set_doc = {"fulfillment": fulfillment, "updated_at": now_iso()}
     if new_status != cur:
         set_doc["status"] = new_status
+    # F4 — sinkronkan stage + sub_status (turunan dari status fulfillment final).
+    from services.so_status import stage_fields
+    set_doc.update(stage_fields({**order, **set_doc}))
     await db.sales_orders.update_one({"id": order_id}, {"$set": set_doc})
     return new_status
 

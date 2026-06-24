@@ -1,34 +1,26 @@
 [
   {
-    "content": "FASE 4: Petakan model status SO existing",
+    "content": "Verify FASE 4 POC (so_status.py + poc_so_status.py) passes",
     "status": "completed"
   },
   {
-    "content": "FASE 4: POC derivasi stage/sub_status + backfill idempotent (isolasi) — POC LULUS",
+    "content": "Wire backend: stage_fields into sales_orders.py + fulfillment_status.py + backorder_service + inventory_service + _norm_backorder read fallback",
     "status": "completed"
   },
   {
-    "content": "HANDOFF ditulis ke plan.md (titik berhenti FASE 4)",
+    "content": "Create migration scripts/migrate_so_status.py + call backfill_so_status in seed_realistic.seed_all",
     "status": "completed"
   },
   {
-    "content": "[PENDING] FASE 4 Backend wiring: create_order/_transition/recompute/release + _norm fallback",
-    "status": "pending"
+    "content": "Bug poin 14: guiding 409 messages in _transition",
+    "status": "completed"
   },
   {
-    "content": "[PENDING] FASE 4 Migrasi: scripts/migrate_so_status.py + panggil backfill di seed + gate",
-    "status": "pending"
+    "content": "Frontend: utils/soStatus.js + SoStatusBadges.jsx (StagePill/SubStatusChips/StageTimeline) + OrderDetailPanel + OrdersView + OrderDashboard wired",
+    "status": "completed"
   },
   {
-    "content": "[PENDING] FASE 4 Bug poin 14: pesan 409 memandu + guard tombol per-stage",
-    "status": "pending"
-  },
-  {
-    "content": "[PENDING] FASE 4 Frontend: utils/soStatus.js + OrderDetailPanel timeline stage+chip + OrdersView/Dashboard mapping",
-    "status": "pending"
-  },
-  {
-    "content": "[PENDING] FASE 4: seed_reset gate + testing agent end-to-end + update plan SELESAI",
-    "status": "pending"
+    "content": "Close phase: seed_reset.sh gate (green, F4 backfill integrated) + testing agent end-to-end + update PLAN_POS_REVAMP.md to SELESAI",
+    "status": "in_progress"
   }
 ]

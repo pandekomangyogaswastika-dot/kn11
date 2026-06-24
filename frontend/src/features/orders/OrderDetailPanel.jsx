@@ -1,20 +1,10 @@
 import { useEffect, useState } from "react";
-import { XCircle, Clock3, Truck, CreditCard, PackageX, ShieldAlert, Send, FileText, AlertTriangle, PackageCheck, Check, Package, Circle, X } from "lucide-react";
+import { XCircle, Clock3, Truck, CreditCard, PackageX, ShieldAlert, Send, FileText, AlertTriangle, PackageCheck } from "lucide-react";
 import { formatCurrency, formatQty } from "../../utils/formatters";
 import { StatusPill } from "../../components/CoreWidgets";
+import { StagePill, StageTimeline } from "../../components/SoStatusBadges";
 import axios, { API } from "../../services/apiClient";
 import ProcessTimeline from "../documents/ProcessTimeline";
-
-const TIMELINE_STEPS = [
-  { status: "reserved", label: "Reserved", Icon: Check },
-  { status: "approved", label: "Approved", Icon: Check },
-  { status: "confirmed", label: "Confirmed (Keep)", Icon: Check },
-  { status: "picked", label: "Picked (Ready)", Icon: Package },
-  { status: "shipped", label: "Shipped", Icon: Truck },
-  { status: "done", label: "Delivered (Done)", Icon: PackageCheck },
-];
-const STATUS_ORDER = ["waiting_approval", "reserved", "approved", "confirmed",
-  "partially_picked", "picked", "partially_shipped", "shipped", "done"];
 
 export function OrderDetailPanel({
   order: sel,
@@ -80,7 +70,7 @@ export function OrderDetailPanel({
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-wide text-[#0058CC]">{sel.number}</p>
           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-            <StatusPill status={sel.status} />
+            <StagePill order={sel} testId="order-stage-pill" />
             <StatusPill status={sel.payment_status} />
             {sel.has_backorder && (
               <span data-testid="order-backorder-chip" className="rounded bg-[#FFF1EA] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#B23B14]">
@@ -134,47 +124,7 @@ export function OrderDetailPanel({
           </div>
         )}
 
-        <div className="rounded-md border border-[#EFF0F2] bg-[#FAFBFC] p-2.5">
-          <p className="text-[10px] font-bold uppercase text-[#6B6B73] mb-2">Status Timeline</p>
-          <div className="space-y-1.5">
-            {TIMELINE_STEPS.map(({ status, label, Icon }) => {
-              const currentIdx = STATUS_ORDER.indexOf(sel.status);
-              const stepIdx = STATUS_ORDER.indexOf(status);
-              const isActive = stepIdx === currentIdx;
-              const isPassed = stepIdx < currentIdx;
-              const isCancelled = sel.status === "cancelled";
-              return (
-                <div key={status} className="flex items-center gap-2">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] flex-shrink-0 ${
-                    isCancelled ? "bg-gray-200 text-gray-400" :
-                    isActive ? "bg-[#007AFF] text-white font-bold" :
-                    isPassed ? "bg-green-500 text-white" :
-                    "bg-gray-200 text-gray-400"
-                  }`}>
-                    {isPassed || isActive ? <Icon size={11} /> : <Circle size={7} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-[11px] ${
-                      isCancelled ? "text-gray-400" :
-                      isActive ? "font-bold text-[#007AFF]" :
-                      isPassed ? "text-green-700 font-semibold" :
-                      "text-[#8E8E93]"
-                    }`}>
-                      {label}
-                    </p>
-                  </div>
-                  {isActive && <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#007AFF] text-white font-bold">CURRENT</span>}
-                </div>
-              );
-            })}
-            {sel.status === "cancelled" && (
-              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[#EFF0F2]">
-                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] flex-shrink-0 bg-red-500 text-white"><X size={11} /></div>
-                <p className="text-[11px] font-bold text-red-600">Order Cancelled</p>
-              </div>
-            )}
-          </div>
-        </div>
+        <StageTimeline order={sel} />
 
         {/* EPIC6 — Document Hub: rantai dokumen terkait + deep-link */}
         <ProcessTimeline docType="sales_order" docId={sel.id} onNavigate={onOpenDocument} />

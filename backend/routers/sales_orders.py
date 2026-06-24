@@ -15,6 +15,7 @@ from services.roll_service import (
 from services.config_service import compute_order_pricing, evaluate_approval, role_satisfies, get_allocation_policy
 from services.fulfillment_service import classify_lines
 from services.fulfillment_status import recompute_so_status, create_outbound_tasks_for_order
+from services.so_status import stage_fields, derive_stage_substatus, SUBSTATUS_LABELS
 from routers.price_approvals import get_effective_special_price
 from services.uom_service import to_base, load_fixed_factors
 from services.customer_service import evaluate_credit_gate
@@ -138,13 +139,18 @@ async def preview_lots(payload: AllocationPreviewIn, request: Request) -> Dict[s
 
 def _norm_backorder(o: Dict[str, Any]) -> Dict[str, Any]:
     """Pastikan field backorder (Sub-fase 1.6) selalu ada di respons SO — jaga
-    kontrak FE↔BE konsisten untuk order lama yang dibuat sebelum fitur backorder."""
+    kontrak FE↔BE konsisten untuk order lama yang dibuat sebelum fitur backorder.
+    F4 — fallback: turunkan `stage`+`sub_status` bila belum ada (order legacy)."""
     if not o:
         return o
     o.setdefault("has_backorder", False)
     o.setdefault("backorders", [])
     o.setdefault("has_mixed_lot", False)
     o.setdefault("allocation_policy", {})
+    # F4 — stage/sub_status SSOT (derivasi dari status + konteks). Selalu segarkan
+    # pada respons agar order legacy/yang belum ter-backfill tetap konsisten.
+    if not o.get("stage"):
+        o.update(stage_fields(o))
     return o
 
 
@@ -493,6 +499,8 @@ async def create_order(payload: SalesOrderCreate, request: Request) -> Dict[str,
         "has_mixed_lot": has_mixed_lot,
         "created_at": now_iso(), "updated_at": now_iso()
     }
+    # F4 — derive stage + sub_status (SSOT 2-level) dari status awal + konteks backorder/approval.
+    order.update(stage_fields(order))
     await db.sales_orders.insert_one(order)
     # Konsumsi override kredit bila dipakai untuk melewati blokir (sekali pakai)
     if credit_gate["override"]:
@@ -537,6 +545,25 @@ async def update_order(order_id: str, payload: GenericPatch, request: Request) -
     return order
 
 
+def _allowed_action_hint(status: str) -> str:
+    """Bug poin 14 — petunjuk aksi yang relevan untuk tiap status (dipakai di pesan 409)."""
+    return {
+        "draft": "Pesan ulang / reservasi stok terlebih dulu sebelum diajukan.",
+        "reserved": "Ajukan untuk persetujuan (Submit), atau lepas reservasi/batalkan.",
+        "waiting_approval": "Menunggu persetujuan admin/manager — setujui atau tolak dari Pusat Persetujuan.",
+        "waiting_stock": "Pesanan menunggu stok (backorder). Akan otomatis lanjut saat barang masuk.",
+        "approved": "Confirm pesanan saat stok siap untuk membuat tugas gudang (outbound).",
+        "confirmed": "Proses pengambilan barang (pick) di gudang.",
+        "partially_picked": "Lanjutkan pick sisa barang, lalu kirim.",
+        "picked": "Kirim barang (dispatch) untuk membuat Surat Jalan.",
+        "partially_shipped": "Lanjutkan pengiriman sisa barang.",
+        "shipped": "Tandai diterima customer untuk menyelesaikan pesanan.",
+        "done": "Pesanan sudah selesai (terkirim & diterima).",
+        "cancelled": "Pesanan sudah dibatalkan.",
+        "expired": "Reservasi pesanan kedaluwarsa — buat pesanan baru bila masih diperlukan.",
+    }.get(status, "Periksa kembali tahap pesanan sebelum menjalankan aksi ini.")
+
+
 async def _transition(
     order_id: str, expected_from: List[str], new_status: str,
     actor_name: str, action: str, extra_data: Dict[str, Any] = {}
@@ -545,8 +572,27 @@ async def _transition(
     if not order:
         raise HTTPException(status_code=404, detail="Order tidak ditemukan")
     if order["status"] not in expected_from:
-        raise HTTPException(status_code=409, detail=f"Status saat ini '{order['status']}' tidak memungkinkan aksi ini")
+        # Bug poin 14 — pesan 409 yang MEMANDU (sebut tahap saat ini + aksi yang boleh),
+        # bukan error mentah. FE memakai ini untuk guard tombol per-stage.
+        cur_stage, cur_subs = derive_stage_substatus(order)
+        sub_label = ", ".join(SUBSTATUS_LABELS.get(s, s) for s in cur_subs) if cur_subs else ""
+        hint = _allowed_action_hint(order["status"])
+        raise HTTPException(status_code=409, detail={
+            "code": "INVALID_TRANSITION",
+            "message": (
+                f"Pesanan ada di tahap '{cur_stage}'"
+                + (f" ({sub_label})" if sub_label else "")
+                + f" sehingga aksi '{action}' belum bisa dijalankan. {hint}"
+            ),
+            "current_status": order["status"],
+            "current_stage": cur_stage,
+            "current_sub_status": cur_subs,
+            "attempted_action": action,
+            "allowed_from": expected_from,
+        })
     update_data = {"status": new_status, "updated_at": now_iso(), **extra_data}
+    # F4 — sinkronkan stage + sub_status (turunan dari status final + konteks).
+    update_data.update(stage_fields({**order, **update_data}))
     order = await db.sales_orders.find_one_and_update(
         {"id": order_id}, {"$set": update_data},
         projection={"_id": 0}, return_document=ReturnDocument.AFTER
@@ -651,6 +697,8 @@ async def release_reservation(order_id: str, request: Request) -> Dict[str, Any]
         "has_backorder": False,
         "updated_at": now_iso()
     }
+    # F4 — sinkronkan stage/sub_status untuk status baru (draft → Reserved/...).
+    update_data.update(stage_fields({**order, **update_data}))
     order = await db.sales_orders.find_one_and_update(
         {"id": order_id}, {"$set": update_data},
         projection={"_id": 0}, return_document=ReturnDocument.AFTER

@@ -2780,6 +2780,11 @@ async def seed_all(db_instance=None):
     from services.roll_service import backfill_roll_counts
     rc = await backfill_roll_counts()
     print(f"   [F2-UoM] roll_count backfilled ke {rc} balance")
+    # F4 (Status SO 2-level) — backfill stage+sub_status ke SEMUA sales_orders (additive, idempotent).
+    from services.so_status import backfill_so_status
+    so_stat = await backfill_so_status(db)
+    print(f"   [F4-Status] stage/sub_status backfilled ke {so_stat['updated']}/{so_stat['total']} SO "
+          f"(invalid={so_stat['invalid']})")
     print("\n✅ All realistic seed data inserted successfully!")
 
     # Compute summary counts
