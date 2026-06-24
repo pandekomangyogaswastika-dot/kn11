@@ -1,0 +1,34 @@
+[
+  {
+    "content": "FASE 4: Petakan model status SO existing",
+    "status": "completed"
+  },
+  {
+    "content": "FASE 4: POC derivasi stage/sub_status + backfill idempotent (isolasi) — POC LULUS",
+    "status": "completed"
+  },
+  {
+    "content": "HANDOFF ditulis ke plan.md (titik berhenti FASE 4)",
+    "status": "completed"
+  },
+  {
+    "content": "[PENDING] FASE 4 Backend wiring: create_order/_transition/recompute/release + _norm fallback",
+    "status": "pending"
+  },
+  {
+    "content": "[PENDING] FASE 4 Migrasi: scripts/migrate_so_status.py + panggil backfill di seed + gate",
+    "status": "pending"
+  },
+  {
+    "content": "[PENDING] FASE 4 Bug poin 14: pesan 409 memandu + guard tombol per-stage",
+    "status": "pending"
+  },
+  {
+    "content": "[PENDING] FASE 4 Frontend: utils/soStatus.js + OrderDetailPanel timeline stage+chip + OrdersView/Dashboard mapping",
+    "status": "pending"
+  },
+  {
+    "content": "[PENDING] FASE 4: seed_reset gate + testing agent end-to-end + update plan SELESAI",
+    "status": "pending"
+  }
+]
