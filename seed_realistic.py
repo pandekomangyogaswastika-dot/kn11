@@ -1721,14 +1721,49 @@ async def seed_entities_and_backfill():
          "status": "active", "created_by": "seed", "created_at": now_iso(), "updated_at": now_iso()},
     ])
     tagged = 0
-    for col in ["sales_orders", "purchase_orders", "customers", "invoices"]:
-        docs = await db[col].find({}, {"_id": 0, "id": 1}).to_list(2000)
-        for d in docs:
-            ent = "ent_kanda" if random.random() < 0.3 else "ent_ksc"
-            await db[col].update_one({"id": d["id"]}, {"$set": {"entity_id": ent}})
-            tagged += 1
-    # F2b — pin demo Pending SO (SO-0009) + PO incoming batik ke entitas yang SAMA
-    # (ent_ksc) agar coverage Pending SO selalu "Terjamin" (tak terganggu acak di atas).
+    # Multi-entity (F0): entity adalah properti CUSTOMER; sales_orders & invoices
+    # MEWARISI entity customer-nya agar relasi customer↔SO↔invoice TIDAK terputus
+    # lintas-entitas. (Bug lama: tagging acak per-dokumen membuat customer "yatim"
+    # di entitas berbeda dari SO-nya → user sales tak bisa memilih customer sama sekali.)
+    # Sebagian kecil customer ditaruh di CV Kanda untuk variasi Entity Switcher,
+    # sisanya di PT Kain Suka Cita (entitas utama tim sales).
+    KANDA_CUSTOMERS = {"cust_moda_surabaya"}
+    cust_entity = {}
+    for c in await db.customers.find({}, {"_id": 0, "id": 1}).to_list(2000):
+        ent = "ent_kanda" if c["id"] in KANDA_CUSTOMERS else "ent_ksc"
+        cust_entity[c["id"]] = ent
+        await db.customers.update_one({"id": c["id"]}, {"$set": {"entity_id": ent}})
+        tagged += 1
+    # Sales orders mewarisi entity customer-nya; tanpa customer → ent_ksc.
+    for o in await db.sales_orders.find(
+        {}, {"_id": 0, "id": 1, "customer_id": 1, "has_backorder": 1}
+    ).to_list(3000):
+        ent = cust_entity.get(o.get("customer_id"), "ent_ksc")
+        await db.sales_orders.update_one({"id": o["id"]}, {"$set": {"entity_id": ent}})
+        # Sinkronkan entity baris backorder HANYA bila array-nya ada (hindari error path).
+        if o.get("has_backorder"):
+            await db.sales_orders.update_one(
+                {"id": o["id"], "backorders.0": {"$exists": True}},
+                {"$set": {"backorders.$[].entity_id": ent}})
+        tagged += 1
+    # Invoices mewarisi entity customer (atau dari SO bila customer tak terpetakan).
+    for inv in await db.invoices.find(
+        {}, {"_id": 0, "id": 1, "customer_id": 1, "order_id": 1, "sales_order_id": 1}
+    ).to_list(3000):
+        ent = cust_entity.get(inv.get("customer_id"))
+        if not ent:
+            oid = inv.get("order_id") or inv.get("sales_order_id")
+            so = await db.sales_orders.find_one({"id": oid}, {"_id": 0, "entity_id": 1}) if oid else None
+            ent = (so or {}).get("entity_id") or "ent_ksc"
+        await db.invoices.update_one({"id": inv["id"]}, {"$set": {"entity_id": ent}})
+        tagged += 1
+    # Purchase orders: acak ~70/30 (berbasis vendor, tak terkait customer) → variasi entitas.
+    for d in await db.purchase_orders.find({}, {"_id": 0, "id": 1}).to_list(2000):
+        ent = "ent_kanda" if random.random() < 0.3 else "ent_ksc"
+        await db.purchase_orders.update_one({"id": d["id"]}, {"$set": {"entity_id": ent}})
+        tagged += 1
+    # F2b — pin demo Pending SO (SO-0009 → cust_textile_medan = ent_ksc) + PO incoming batik ke
+    # entitas yang SAMA (ent_ksc) agar coverage Pending SO selalu "Terjamin".
     await db.sales_orders.update_one(
         {"number": "SO-0009"},
         {"$set": {"entity_id": "ent_ksc", "backorders.$[].entity_id": "ent_ksc"}})
